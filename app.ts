@@ -4,6 +4,7 @@ import bodyParser from 'body-parser'
 
 import userRouter from './routers/userRouter'
 import roomRouter from './routers/roomRouter'
+import noteRouter from './routers/noteRouter'
 
 const prisma = new PrismaClient()
 const app = express()
@@ -13,10 +14,11 @@ app.use(bodyParser.json())
 
 app.use('/users', userRouter)
 app.use('/rooms', roomRouter)
+app.use('/notes', noteRouter)
 
 app.listen(port, async () => {
+    await seeder()
     console.log('Server is running on http://localhost:' + port)
-    seeder()
 })
 
 async function seeder() {
