@@ -1,0 +1,15 @@
+version: '3.5'
+
+#Current Database is final_project_db
+
+services:
+  mysqldb:
+    container_name: final_project_db
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: 'final_project_db'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: 'pass'
+      MYSQL_ROOT_PASSWORD: 'root'
+    ports:
+      - 3306:3306
