@@ -14,3 +14,21 @@ model User {
   id String @default(uuid()) @id
   name String
 }
+
+model Room {
+  id String @default(uuid()) @id
+  name String
+  total Int
+  isPrivate Boolean
+  note Note[]
+}
+
+model Note {
+  id String @default(uuid()) @id
+  massage String
+  room Room @relation(fields: [roomId], references: [id])
+  roomId String
+  createdAt  DateTime   @default(now())
+}
+
+

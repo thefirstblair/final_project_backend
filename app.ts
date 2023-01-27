@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import express from 'express'
-import bodyParser from 'body-parser'
+import bodyParser, { Options } from 'body-parser'
 
 import userRouter from './routers/userRouter'
 import roomRouter from './routers/roomRouter'
@@ -17,11 +17,12 @@ app.use('/rooms', roomRouter)
 app.use('/notes', noteRouter)
 
 app.listen(port, async () => {
-    await seeder()
+    await userSeeder()
+    await roomSeeder()
     console.log('Server is running on http://localhost:' + port)
 })
 
-async function seeder() {
+async function userSeeder() {
     await prisma.user.deleteMany({ where: {} })
 
     await prisma.user.create({
@@ -38,3 +39,30 @@ async function seeder() {
 
     console.log('Seeder completed')
 }
+
+async function roomSeeder() {
+    await prisma.room.deleteMany({ where: {}})
+
+    await prisma.room.create({
+        data: {
+            name: 'Pond',
+            total: 4,
+            private: false,
+            note: {}
+        }
+    })
+
+    await prisma.room.create({
+        data: {
+            name: 'Kuy',
+            total: 1,
+            private: false,
+            note: {}
+        }
+    })
+
+    console.log('Room seeder is completed.')
+
+    
+}
+

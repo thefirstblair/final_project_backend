@@ -28,6 +28,7 @@ userRouter.get("/:id", async (req, res) => {
   res.send(foundUser);
 });
 
+//Create a user
 userRouter.post("/", async (req, res) => {
   const { name } = req.body;
 
@@ -38,6 +39,45 @@ userRouter.post("/", async (req, res) => {
   });
 
   res.status(201).send(createdUser);
+});
+
+//Delete a user
+userRouter.delete('/:id' , async (req , res) => {
+  const { id } = req.params;
+  const foundUser = await prisma.user.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  if (!foundUser) {
+    res.status(404).send("Not found user " + id);
+    return;
+  }
+
+  res.send('Delete user ' + id + ' complete.');
+});
+
+//Update user name
+userRouter.put('/:id' , async(req , res) => {
+  const {id} = req.params;
+  const {name} = req.body;
+
+  const updateUser = await prisma.user.update({
+    where:{
+      id
+    },
+    data:{
+      name
+    }
+  });
+
+  if (!updateUser) {
+    res.status(404).send("Not found user " + id);
+    return;
+  }
+
+  res.send('Update user ' + id + ' complete.');
 });
 
 export default userRouter;
