@@ -11,6 +11,18 @@ userRouter.get("/", async (req, res) => {
   res.send(users);
 });
 
+//Get me from session
+userRouter.get("/me", (req, res) => {
+  const user = req.session?.user;
+
+  if (!user) {
+    res.status(404).send("Not found user from your session");
+    return;
+  }
+
+  res.send(user);
+});
+
 //Get single user
 userRouter.get("/:id", async (req, res) => {
   const { id } = req.params;
@@ -38,11 +50,32 @@ userRouter.post("/", async (req, res) => {
     },
   });
 
+  if (req.session) {
+    req.session.user = createdUser;
+  }
+
   res.status(201).send(createdUser);
 });
 
+//Logout from session
+userRouter.delete("/logout", async (req, res) => {
+  try {
+    await prisma.user.delete({
+      where: {
+        id: req.session?.user.id,
+      },
+    });
+  }catch(err){
+    console.log(err)
+  }
+
+  req.session = null;
+
+  res.status(204).send();
+});
+
 //Delete a user
-userRouter.delete('/:id' , async (req , res) => {
+userRouter.delete("/:id", async (req, res) => {
   const { id } = req.params;
   const foundUser = await prisma.user.findUnique({
     where: {
@@ -55,21 +88,22 @@ userRouter.delete('/:id' , async (req , res) => {
     return;
   }
 
-  res.send('Delete user ' + id + ' complete.');
+  res.send("Delete user " + id + " complete.");
 });
 
+
 //Update user name
-userRouter.put('/:id' , async(req , res) => {
-  const {id} = req.params;
-  const {name} = req.body;
+userRouter.put("/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
 
   const updateUser = await prisma.user.update({
-    where:{
-      id
+    where: {
+      id,
     },
-    data:{
-      name
-    }
+    data: {
+      name,
+    },
   });
 
   if (!updateUser) {
@@ -77,7 +111,7 @@ userRouter.put('/:id' , async(req , res) => {
     return;
   }
 
-  res.send('Update user ' + id + ' complete.');
+  res.send("Update user " + id + " complete.");
 });
 
 export default userRouter;

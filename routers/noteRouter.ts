@@ -29,12 +29,13 @@ noteRouter.get('/:id', async(req , res) => {
 
 //Create a note
 noteRouter.post('/' , async(req , res) => {
-    const { massage , roomId , createdAt } = req.body;
+    const { owner_name , massage , roomId , createdAt } = req.body;
     const createNote = await prisma.note.create({
         data: {
-            massage:massage,
-            roomId:roomId,
-            createdAt:createdAt,
+            owner_name,
+            massage,
+            roomId,
+            createdAt,
         },
     });
 

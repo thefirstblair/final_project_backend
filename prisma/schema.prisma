@@ -25,6 +25,7 @@ model Room {
 
 model Note {
   id String @default(uuid()) @id
+  owner_name String
   massage String
   room Room @relation(fields: [roomId], references: [id])
   roomId String
