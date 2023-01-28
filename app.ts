@@ -18,7 +18,7 @@ app.use('/notes', noteRouter)
 
 app.listen(port, async () => {
     await userSeeder()
-    await roomSeeder()
+    //await roomSeeder()
     console.log('Server is running on http://localhost:' + port)
 })
 
@@ -47,7 +47,7 @@ async function roomSeeder() {
         data: {
             name: 'Pond',
             total: 4,
-            private: false,
+            isPrivate: false,
             note: {}
         }
     })
@@ -56,7 +56,7 @@ async function roomSeeder() {
         data: {
             name: 'Kuy',
             total: 1,
-            private: false,
+            isPrivate: false,
             note: {}
         }
     })
