@@ -5,6 +5,7 @@ import bodyParser, { Options } from "body-parser";
 import userRouter from "./routers/userRouter";
 import roomRouter from "./routers/roomRouter";
 import noteRouter from "./routers/noteRouter";
+import featureRouter from "./routers/featureRouter";
 import cookieSession from "cookie-session";
 import cors from "cors";
 
@@ -36,6 +37,7 @@ app.use(bodyParser.json());
 app.use("/users", userRouter);
 app.use("/rooms", roomRouter);
 app.use("/notes", noteRouter);
+app.use("/features", featureRouter);
 
 app.listen(port, async () => {
   await userSeeder();
