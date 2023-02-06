@@ -9,6 +9,7 @@ import featureRouter from "./routers/featureRouter";
 import cookieSession from "cookie-session";
 import cors from "cors";
 import { Server } from "socket.io";
+import { Socket } from "dgram";
 
 const prisma = new PrismaClient();
 const io = new Server();
@@ -31,6 +32,7 @@ app.use(
   cors({
     origin: "http://localhost:3000",
     credentials: true,
+    methods:['GET' , 'POST' , 'DELETE' , 'PUT']
   })
 );
 
@@ -41,57 +43,58 @@ app.use("/rooms", roomRouter);
 app.use("/notes", noteRouter);
 app.use("/features", featureRouter);
 
-const rooms: Record<string, any> = {};
+io.on('connection' , (socket)=> {
+  console.log(`User connected ${socket.id}`);
 
-io.on("connection", (socket) => {
-  socket.on("set name", (name) => {
-    socket.data.name = name;
-    socket.emit("server_response", "You name has been set.");
+  socket.on('join-room' , async(data) => {
+    const {userId , roomId} = data;
+
+    let foundRoom = await prisma.room.findUnique({
+      where:{
+        id:roomId
+      }
+    });
+
+    if (!foundRoom){
+      foundRoom = await prisma.room.create({
+        data:{
+          name:roomId,
+          total:1
+        }
+      });
+      socket.join(foundRoom.id);
+      io.to(foundRoom.name).emit("room_update", foundRoom.id);
+      socket.emit("server_response", "Room has been updated.");
+    }
+
+    await prisma.room.update({
+      where:{
+        id:roomId
+      },
+      data:{
+        userList:{
+          connect:{
+            id:userId
+          }
+        },
+        total:{
+          increment:1
+        }
+      }
+    })
+    socket.join(foundRoom.id);
+    io.to(foundRoom.name).emit("room_update", foundRoom.id);
+    socket.emit("server_response", "Room has been updated.");
+
   });
 
-  socket.on("create room", (room_name) => {
-    if (!socket.data.name) return;
-    if (rooms[room_name]) return;
-
-    rooms[room_name] = {
-      name: room_name,
-      messages: [],
-      users: [socket.data.name],
-      background: 'default',
-    };
-
-    socket.data.room_name = room_name;
-    socket.join(room_name);
-    io.to(socket.data.room_name).emit("room_update", rooms[socket.data.room_name]);
-    socket.emit("server_response", "You joined " + room_name);
-    socket.emit("server_response", "Room has been created.");
-  });
-
-  socket.on("join room", (room_name) => {
-    if (!socket.data.name) return;
-    if (!rooms[room_name]) return;
-
-    socket.data.room_name = room_name;
-    socket.join(room_name);
-
-    rooms[room_name].users.push(socket.data.name);
-
-    io.to(socket.data.room_name).emit("room_update", rooms[socket.data.room_name]);
-    socket.emit("server_response", "You joined " + room_name);
-  });
-
-  socket.on("message", (message) => {
-    if (!socket.data.room_name) return;
-
-    rooms[socket.data.room_name].messages.push(socket.data.name,' : ',message);
-
-    io.to(socket.data.room_name).emit("room_update", rooms[socket.data.room_name]);
-  });
 });
 
 app.listen(port, async () => {
+  await prisma.user.deleteMany({ where: {} });
+  await prisma.room.deleteMany({ where: {} });
+  await roomSeeder();
   await userSeeder();
-  //await roomSeeder()
   io.listen(3002);
   console.log("Server is running on http://localhost:" + port);
 });
@@ -102,12 +105,32 @@ async function userSeeder() {
   await prisma.user.create({
     data: {
       name: "Alice",
+      room:{
+        connectOrCreate:{
+          create:{
+            name:'Lobby1'
+          },
+          where:{
+            id:""
+          }
+        }
+      }
     },
   });
 
   await prisma.user.create({
     data: {
       name: "Alex",
+      room:{
+        connectOrCreate:{
+          create:{
+            name:'Lobby2'
+          },
+          where:{
+            id:""
+          }
+        }
+      }
     },
   });
 
@@ -115,25 +138,61 @@ async function userSeeder() {
 }
 
 async function roomSeeder() {
-  await prisma.room.deleteMany({ where: {} });
 
   await prisma.room.create({
     data: {
-      name: "Pond",
-      total: 4,
-      isPrivate: false,
-      note: {},
-    },
-  });
-
-  await prisma.room.create({
-    data: {
-      name: "Kuy",
-      total: 1,
-      isPrivate: false,
-      note: {},
+      name: "Pondzza007",
     },
   });
 
   console.log("Room seeder is completed.");
 }
+
+// const rooms: Record<string, any> = {};
+
+// io.on("connection", (socket) => {
+//   console.log(socket.id)
+//   socket.on("set name", (name) => {
+//     socket.data.name = name;
+//     socket.emit("server_response", "You name has been set.");
+//   });
+
+//   socket.on("create room", (room_name) => {
+//     if (!socket.data.name) return;
+//     if (rooms[room_name]) return;
+
+//     rooms[room_name] = {
+//       name: room_name,
+//       messages: [],
+//       users: [socket.data.name],
+//       background: 'default',
+//     };
+
+//     socket.data.room_name = room_name;
+//     socket.join(room_name);
+//     io.to(socket.data.room_name).emit("room_update", rooms[socket.data.room_name]);
+//     socket.emit("server_response", "You joined " + room_name);
+//     socket.emit("server_response", "Room has been created.");
+//   });
+
+//   socket.on("join room", (room_name) => {
+//     if (!socket.data.name) return;
+//     if (!rooms[room_name]) return;
+
+//     socket.data.room_name = room_name;
+//     socket.join(room_name);
+
+//     rooms[room_name].users.push(socket.data.name);
+
+//     io.to(socket.data.room_name).emit("room_update", rooms[socket.data.room_name]);
+//     socket.emit("server_response", "You joined " + room_name);
+//   });
+
+//   socket.on("message", (message) => {
+//     if (!socket.data.room_name) return;
+
+//     rooms[socket.data.room_name].messages.push(socket.data.name,' : ',message);
+
+//     io.to(socket.data.room_name).emit("room_update", rooms[socket.data.room_name]);
+//   });
+// });

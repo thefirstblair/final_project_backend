@@ -47,6 +47,16 @@ userRouter.post("/", async (req, res) => {
   const createdUser = await prisma.user.create({
     data: {
       name,
+      room:{
+        connectOrCreate:{
+          create:{
+            name:'Lobby'
+          },
+          where:{
+            id:""
+          }
+        }
+      }
     },
   });
 
@@ -92,18 +102,20 @@ userRouter.delete("/:id", async (req, res) => {
 });
 
 
-//Update user name
+//Update user room
 userRouter.put("/:id", async (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { roomId } = req.body;
 
   const updateUser = await prisma.user.update({
-    where: {
+    where:{
       id,
     },
-    data: {
-      name,
-    },
+    data:{
+      room:{
+        // disconnect: true
+      }
+    }
   });
 
   if (!updateUser) {

@@ -36,7 +36,6 @@ roomRouter.post('/' , async(req , res) => {
             name,
             total,
             isPrivate,
-            note:{}
         },
     });
 
@@ -80,27 +79,6 @@ roomRouter.put('/:id' , async(req , res) => {
     }
 
     res.send('Update total in room ' + id + ' complete.');
-});
-
-//Add note to room
-roomRouter.put('/:id', async(req , res) => {
-    const { id } = req.params;
-    const { note } = req.body;
-    const updateRoom = await prisma.room.update({
-        where:{
-            id,
-        },
-        data:{
-            note:note
-        }
-    });
-
-    if(!updateRoom){
-        res.status(404).send("Not found room " + id);
-        return;
-    }
-
-    res.send('Update note in room ' + id + ' complete.');
 });
 
 

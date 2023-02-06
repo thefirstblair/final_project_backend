@@ -29,11 +29,11 @@ noteRouter.get('/:id', async(req , res) => {
 
 //Create a note
 noteRouter.post('/' , async(req , res) => {
-    const { owner_name , massage , roomId , createdAt } = req.body;
+    const { owner_name , textNote , roomId , createdAt } = req.body;
     const createNote = await prisma.note.create({
         data: {
             owner_name,
-            massage,
+            textNote,
             roomId,
             createdAt,
         },
@@ -62,7 +62,7 @@ noteRouter.delete('/:id' , async (req , res) => {
 
 //Edit note
 noteRouter.put('/:id' , async(req , res) => {
-    const { massage , createdAt } = req.body
+    const { textNote , createdAt } = req.body
     const { id } = req.params
     
     const updateNote = await prisma.note.update({
@@ -70,7 +70,7 @@ noteRouter.put('/:id' , async(req , res) => {
             id
         },
         data: {
-            massage,
+            textNote,
             createdAt,
         },
     });
