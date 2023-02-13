@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Room, User } from "@prisma/client";
 import express from "express";
 import bodyParser, { Options } from "body-parser";
 
@@ -43,18 +43,36 @@ app.use("/rooms", roomRouter);
 app.use("/notes", noteRouter);
 app.use("/features", featureRouter);
 
+
+
+let chatRoom: Room | null = null;
+let allUsers: User[];
+
 io.on('connection' , (socket)=> {
   console.log(`User connected ${socket.id}`);
 
   socket.on('join-room' , async(data) => {
     const {userId , roomId} = data;
 
+    // find room with room_id that response from front
     let foundRoom = await prisma.room.findUnique({
       where:{
         id:roomId
       }
     });
 
+    let foundUser = await prisma.user.findUnique({
+      where: {
+        id:userId
+      }
+    });
+
+    if (!foundUser){
+      return;
+    }
+
+    // Check that room is exist 
+    // if don't exist we create new room and name it with room id
     if (!foundRoom){
       foundRoom = await prisma.room.create({
         data:{
@@ -67,6 +85,7 @@ io.on('connection' , (socket)=> {
       socket.emit("server_response", "Room has been updated.");
     }
 
+    // Update room data
     await prisma.room.update({
       where:{
         id:roomId
@@ -81,12 +100,48 @@ io.on('connection' , (socket)=> {
           increment:1
         }
       }
-    })
+    });
+
+    // if room exist will proc here.
     socket.join(foundRoom.id);
     io.to(foundRoom.name).emit("room_update", foundRoom.id);
     socket.emit("server_response", "Room has been updated.");
 
+    // Sent message to room.
+    let __createdtime__ = Date.now();
+    socket.to(foundRoom.id).emit('receive_message' , {
+      message: `${userId.name} has joined the chat room`,
+      username: userId.name,
+      __createdtime__,
+    });
+
+    // Sent message to Welcome people that join in
+    socket.emit('receive_message', {
+      message: `Welcome ${userId.name}`,
+      username: userId.name,
+      __createdtime__,
+    });
+
+    //Save the new user to room
+    chatRoom = await prisma.room.findUnique({
+      where:{
+        id:roomId
+      }
+    });
+
+    allUsers.push({ id: socket.id , name:foundUser.name  , roomId:foundRoom.id });
+    // @ts-ignore: Object is possibly 'null'.
+    let chatRoomUsers = allUsers.filter((user) => user.roomId === foundRoom.id);
+    socket.to(foundRoom.id).emit('chatroom_users', chatRoomUsers);
+    socket.emit('chatroom_users', chatRoomUsers);
+
+    
+
   });
+
+
+
+  
 
 });
 
