@@ -9,9 +9,11 @@ import featureRouter from "./routers/featureRouter";
 import cookieSession from "cookie-session";
 import cors from "cors";
 import { Server } from "socket.io";
-import { Socket } from "dgram";
+import leaveroom  from './utils/leave-room';
 import { harperSaveMessage } from "./services/harper-save-message";
 import { harperGetMessages } from "./services/harper-get-messages";
+
+
 const prisma = new PrismaClient();
 const io = new Server();
 const app = express();
@@ -47,7 +49,8 @@ app.use("/features", featureRouter);
 
 
 let chatRoom: Room | null = null;
-let allUsers: User[];
+let allUsers: User[] = [];
+let chatRoomUsers: User[] = [];
 
 io.on('connection' , (socket)=> {
   console.log(`User connected ${socket.id}`);
@@ -86,20 +89,13 @@ io.on('connection' , (socket)=> {
       socket.emit("server_response", "Room has been updated.");
     }
 
-    // Update room data
-    await prisma.room.update({
+    // Update User data
+    await prisma.user.update({
       where:{
-        id:roomId
+        id:userId,
       },
       data:{
-        userList:{
-          connect:{
-            id:userId
-          }
-        },
-        total:{
-          increment:1
-        }
+        roomId:roomId
       }
     });
 
@@ -130,19 +126,11 @@ io.on('connection' , (socket)=> {
       }
     });
 
-    allUsers.push({ id: socket.id , name:foundUser.name  , roomId:foundRoom.id });
+    allUsers.push({ id: foundUser.id , name:foundUser.name  , roomId:foundRoom.id });
     // @ts-ignore: Object is possibly 'null'.
-    let chatRoomUsers = allUsers.filter((user) => user.roomId === foundRoom.id);
+    chatRoomUsers = allUsers.filter((user) => user.roomId === foundRoom.id);
     socket.to(foundRoom.id).emit('chatroom_users', chatRoomUsers);
     socket.emit('chatroom_users', chatRoomUsers);
-
-    //For show last 100 message in room to people who just joining
-    // harperGetMessages(roomId)
-    //   .then((last100Messages) => {
-    //     // console.log('latest messages', last100Messages);
-    //     socket.emit('last_100_messages', last100Messages);
-    //   })
-    //   .catch((err) => console.log(err));
 
     const lastMessages = await prisma.message.findMany({
       where: {
@@ -152,15 +140,6 @@ io.on('connection' , (socket)=> {
     });
     socket.emit('last_100_messages', lastMessages);
 
-  });
-
-  //For sending message in room
-  socket.on('send_message', (data) => {
-    const { message, username, room, __createdtime__ } = data;
-    io.in(room).emit('receive_message', data); // Send to all users in room, including sender
-    harperSaveMessage(message, username, room, __createdtime__) // Save message in db
-      .then((response) => console.log(response))
-      .catch((err) => console.log(err));
   });
 
   socket.on('send_message' , async(data) => {
@@ -186,39 +165,37 @@ io.on('connection' , (socket)=> {
 
   });
 
-  socket.on('leave_room' , (data) => {
+  socket.on('leave_room' , async(data) => {
     const { UserId , roomId } = data;
     socket.leave(roomId);
+    
+    const leaveUser = await prisma.user.update({
+      where:{
+        id:UserId,
+      },
+      data:{
+        roomId:""
+      }
+    });
+
     const __createdtime__ = Date.now();
-    //allUsers = leaveRoom(socket.id, allUsers);
+      allUsers = leaveroom(socket.id, allUsers);
+      socket.to(roomId).emit('chatroom_users', allUsers);
+      socket.to(roomId).emit('receive_message', {
+        message: `${UserId.name} has left the chat`,
+        username: UserId.name,
+        __createdtime__,
+      });
+      console.log(`${UserId.name} has left the chat`);
+    
   });
 
-  // socket.on('leave_room', (data) => {
-  //   const { username, room } = data;
-  //   socket.leave(room);
-  //   const __createdtime__ = Date.now();
-  //   // Remove user from memory
-  //   allUsers = leaveRoom(socket.id, allUsers);
-  //   socket.to(room).emit('chatroom_users', allUsers);
-  //   socket.to(room).emit('receive_message', {
-  //     username: CHAT_BOT,
-  //     message: `${username} has left the chat`,
-  //     __createdtime__,
-  //   });
-  //   console.log(`${username} has left the chat`);
+  // socket.on('disconnect' , () => {
+  //   console.log('User disconnected from the chat');
+
   // });
 
-  // socket.on('disconnect', () => {
-  //   console.log('User disconnected from the chat');
-  //   const user = allUsers.find((user) => user.id == socket.id);
-  //   if (user?.username) {
-  //     allUsers = leaveRoom(socket.id, allUsers);
-  //     socket.to(chatRoom).emit('chatroom_users', allUsers);
-  //     socket.to(chatRoom).emit('receive_message', {
-  //       message: `${user.username} has disconnected from the chat.`,
-  //     });
-  //   }
-  // });
+  
 
 
 });
