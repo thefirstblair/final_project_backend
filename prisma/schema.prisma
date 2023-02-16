@@ -12,36 +12,39 @@ datasource db {
 
 model User {
   id String           @default(uuid()) @id
-  name String?
-  room Room           @relation(fields: [roomId], references: [id])
-  roomId String
+  name String
+  room Room?           @relation(fields: [roomId], references: [id] , onDelete: Cascade)
+  roomId String?
+  Message   Message[]
 }
 
 model Room {
   id String           @default(uuid()) @id
   name String         @default("Lobby")
-  total Int           @default(0)
   isPrivate Boolean   @default(false)
-  noteList Note[]
-  userList User[]
-  messageList Message[]
+  note Note[]
+  user User[]
+  Message   Message[]
 }
 
 model Note {
   id String             @default(uuid()) @id
   owner_name String
   textNote String
-  room Room             @relation(fields: [roomId], references: [id])
+  room Room             @relation(fields: [roomId], references: [id] , onDelete: Cascade)
   roomId String
   createdAt  DateTime   @default(now())
 }
 
 
 model Message {
-  id String             @default(uuid()) @id
-  text String           @default("")
-  author String?
-  room Room             @relation(fields: [roomId], references: [id])
-  roomId String
+  id        Int         @id @default(autoincrement())
+  text      String      @default("")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  User      User?       @relation(fields: [userId], references: [id] , onDelete: Cascade)
+  userId    String?
+  Room      Room?       @relation(fields: [roomId], references: [id] , onDelete: Cascade)
+  roomId    String?
 }
 

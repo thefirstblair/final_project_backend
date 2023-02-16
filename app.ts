@@ -1,7 +1,6 @@
-import { PrismaClient, Room, User } from "@prisma/client";
+import { PrismaClient} from "@prisma/client";
 import express from "express";
-import bodyParser, { Options } from "body-parser";
-
+import bodyParser from "body-parser";
 import userRouter from "./routers/userRouter";
 import roomRouter from "./routers/roomRouter";
 import noteRouter from "./routers/noteRouter";
@@ -9,15 +8,20 @@ import featureRouter from "./routers/featureRouter";
 import cookieSession from "cookie-session";
 import cors from "cors";
 import { Server } from "socket.io";
-import leaveroom  from './utils/leave-room';
-import { harperSaveMessage } from "./services/harper-save-message";
-import { harperGetMessages } from "./services/harper-get-messages";
+import { createServer } from 'http';
 
 
 const prisma = new PrismaClient();
-const io = new Server();
 const app = express();
 const port = 3001;
+const httpServer = createServer(app);
+const io = new Server(httpServer , {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ['GET' , 'POST'],
+  },
+});
+
 
 app.set("trust proxy", 1);
 
@@ -31,278 +35,265 @@ app.use(
   })
 );
 
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true,
-    methods:['GET' , 'POST' , 'DELETE' , 'PUT']
-  })
-);
+// app.use(
+//   cors({
+//     origin: "http://localhost:3000",
+//     credentials: true,
+//     methods:['GET' , 'POST']
+//   })
+// );
 
 app.use(bodyParser.json());
-
 app.use("/users", userRouter);
 app.use("/rooms", roomRouter);
 app.use("/notes", noteRouter);
 app.use("/features", featureRouter);
 
 
-
-let chatRoom: Room | null = null;
-let allUsers: User[] = [];
-let chatRoomUsers: User[] = [];
-
-io.on('connection' , (socket)=> {
-  console.log(`User connected ${socket.id}`);
-
-  socket.on('join-room' , async(data) => {
-    const {userId , roomId} = data;
-
-    // find room with room_id that response from front
-    let foundRoom = await prisma.room.findUnique({
-      where:{
-        id:roomId
-      }
-    });
-
-    let foundUser = await prisma.user.findUnique({
-      where: {
-        id:userId
-      }
-    });
-
-    if (!foundUser){
-      return;
-    }
-
-    // Check that room is exist 
-    // if don't exist we create new room and name it with room id
-    if (!foundRoom){
-      foundRoom = await prisma.room.create({
-        data:{
-          name:roomId,
-          total:1
-        }
-      });
-      socket.join(foundRoom.id);
-      io.to(foundRoom.name).emit("room_update", foundRoom.id);
-      socket.emit("server_response", "Room has been updated.");
-    }
-
-    // Update User data
-    await prisma.user.update({
-      where:{
-        id:userId,
-      },
-      data:{
-        roomId:roomId
-      }
-    });
-
-    // if room exist will proc here.
-    socket.join(foundRoom.id);
-    io.to(foundRoom.name).emit("room_update", foundRoom.id);
-    socket.emit("server_response", "Room has been updated.");
-
-    // Sent message to room.
-    let __createdtime__ = Date.now();
-    socket.to(foundRoom.id).emit('receive_message' , {
-      message: `${userId.name} has joined the chat room`,
-      username: userId.name,
-      __createdtime__,
-    });
-
-    // Sent message to Welcome people that join in
-    socket.emit('receive_message', {
-      message: `Welcome ${userId.name}`,
-      username: userId.name,
-      __createdtime__,
-    });
-
-    //Save the new user to room
-    chatRoom = await prisma.room.findUnique({
-      where:{
-        id:roomId
-      }
-    });
-
-    allUsers.push({ id: foundUser.id , name:foundUser.name  , roomId:foundRoom.id });
-    // @ts-ignore: Object is possibly 'null'.
-    chatRoomUsers = allUsers.filter((user) => user.roomId === foundRoom.id);
-    socket.to(foundRoom.id).emit('chatroom_users', chatRoomUsers);
-    socket.emit('chatroom_users', chatRoomUsers);
-
-    const lastMessages = await prisma.message.findMany({
-      where: {
-        roomId: roomId,
-      },
-      take: 100,
-    });
-    socket.emit('last_100_messages', lastMessages);
-
-  });
-
-  socket.on('send_message' , async(data) => {
-    const { text , userId , roomId } = data;
-    io.in(roomId).emit('receive_message', data);
-    const sender = await prisma.user.findUnique({
+async function checkRoom(userId : string) {
+  try {
+    const user = await prisma.user.findUnique({
       where: {
         id: userId,
       },
     });
 
-    if (!sender) {
-      throw new Error('Sender not found');
+    if(!user){
+      return ;
     }
 
-    await prisma.message.create({
-      data:{
-        text,
-        author:sender.name,
-        roomId:roomId
-      }
+    if(!user.roomId) {
+      return ;
+    }
+
+    const room = await prisma.room.findUnique({
+      where: {
+        id: user.roomId,
+      },
+      include: {
+        user: true,
+      },
     });
 
+    if(!room){
+      return ;
+    }
+
+    if(room.user.length === 0) {
+      await prisma.room.delete({
+        where:{
+          id: room.id
+        },
+      });
+
+      io.emit('roomList' , await prisma.room.findMany());
+    }
+  } catch(err) {
+    console.log(err);
+  }
+}
+
+io.on('connection' , (socket)=> {
+  console.log(`User connected ${socket.id}`);
+
+  socket.on('register' , async(name) => {
+
+    if(!name){
+      return;
+    }
+    
+    const user = await prisma.user.create({
+      data:{
+        name,
+      },
+    });
+
+    socket.data.user = user;
+    socket.emit('user', user);
+    console.log('user registered' , socket.data.user);
   });
 
-  socket.on('leave_room' , async(data) => {
-    const { UserId , roomId } = data;
-    socket.leave(roomId);
-    
-    const leaveUser = await prisma.user.update({
+  socket.on('roomList' , async() => {
+    const rooms = await prisma.room.findMany({
+      include:{
+        user: true,
+      },
+    });
+
+    socket.emit('roomList' , rooms);
+    console.log('RoomList = ' , rooms);
+  });
+
+  socket.on('userList' , async() => {
+    const user = await prisma.user.findMany()
+
+    socket.emit('userList' , user);
+    console.log('userList = ' , user);
+  });
+
+  socket.on('createRoom' , async(roomName) => {
+    if (!roomName || !socket.data.user){
+      return;
+    }
+
+    const room = await prisma.room.create({
+      data:{
+        name: roomName,
+        user: {
+          connect: {
+            id : socket.data.user.id,
+          },
+        },
+      },
+    });
+
+    socket.join(room.id);
+    socket.emit('room' , room);
+    socket.data.user.roomId = room.id;
+    io.emit('roomList' , await prisma.room.findMany());
+    console.log('Room registered' , room);
+  });
+
+  socket.on('joinRoom' , async(roomId) => {
+
+    try{
+      const room = await prisma.room.update({
       where:{
-        id:UserId,
+        id: roomId,
       },
       data:{
-        roomId:""
-      }
+        user:{
+          connect:{
+            id: socket.data.user.id,
+          },
+        },
+      },
     });
 
-    const __createdtime__ = Date.now();
-      allUsers = leaveroom(socket.id, allUsers);
-      socket.to(roomId).emit('chatroom_users', allUsers);
-      socket.to(roomId).emit('receive_message', {
-        message: `${UserId.name} has left the chat`,
-        username: UserId.name,
-        __createdtime__,
-      });
-      console.log(`${UserId.name} has left the chat`);
+    socket.join(room.id);
+    socket.data.user.roomId = room.id;
+    socket.emit('room' , room);
+    console.log('room that this user in is ' , socket.data.user.roomId);
+    io.to(room.id).emit('room' , room);
+    } catch(err) {
+      console.log(err);
+    }
     
   });
 
-  // socket.on('disconnect' , () => {
-  //   console.log('User disconnected from the chat');
+  socket.on('message' , async(message) => {
 
-  // });
+    const room = await prisma.room.findUnique({
+      where: {
+        id: socket.data.user.roomId,
+      },
+      include: {
+        user: true,
+      },
+    });
 
+    if (!room) {
+      return;
+    }
+
+    const newMessage = await prisma.message.create({
+      data:{
+        text: message,
+        User: {
+          connect:{
+            id: socket.data.user.id,
+          },
+        },
+      },
+    });
+
+    await prisma.room.update({
+      where:{
+        id: socket.data.user.roomId,
+      },
+      data:{
+        Message: {
+          connect: {
+            id: newMessage.id,
+          },
+        },
+      },
+    });
+
+
+    socket.to(room.id).emit('message' , {
+      text: message,
+      user: socket.data.user,
+    });
+
+    console.log('Message = ' , message );
+  });
+
+  socket.on('leaveRoom' , async() => {
+    const room = await prisma.room.update({
+      where: {
+        id: socket.data.user.roomId,
+      },
+      data:{
+        user: {
+          disconnect: {
+            id : socket.data.user.id,
+          },
+        },
+      },
+    });
+
+    socket.leave(room.id);
+    socket.data.user.roomId = null;
+    checkRoom(socket.data.user.id);
+    io.to(room.id).emit('room' , room);
+
+  });
   
+  socket.on('disconnect' , async () => {
+    if (!socket.data.user) {
+      return ;
+    }
 
+    checkRoom(socket.data.user.id);
 
+    if(socket.data.user.roomId) {
+
+      const room = await prisma.room.update({
+        where: {
+          id: socket.data.user.roomId,
+        },
+        data: {
+          user: {
+            disconnect: {
+              id: socket.data.user.id,
+            },
+          },
+        },
+      });
+
+      socket.leave(room.id);
+      io.to(room.id).emit('room' , room);
+      socket.emit('room' , room);
+    }
+
+    await prisma.user.delete({
+      where: {
+        id: socket.data.user.id,
+      },
+    });
+    console.log('User disconnected');
+  });
 });
 
+
 app.listen(port, async () => {
-  await prisma.user.deleteMany({ where: {} });
-  await prisma.room.deleteMany({ where: {} });
-  await roomSeeder();
-  await userSeeder();
+
+  // await prisma.message.deleteMany();
+  // await prisma.user.deleteMany();
+  // await prisma.room.deleteMany();
+
   io.listen(3002);
   console.log("Server is running on http://localhost:" + port);
 });
 
-async function userSeeder() {
-  await prisma.user.deleteMany({ where: {} });
-
-  await prisma.user.create({
-    data: {
-      name: "Alice",
-      room:{
-        connectOrCreate:{
-          create:{
-            name:'Lobby1'
-          },
-          where:{
-            id:""
-          }
-        }
-      }
-    },
-  });
-
-  await prisma.user.create({
-    data: {
-      name: "Alex",
-      room:{
-        connectOrCreate:{
-          create:{
-            name:'Lobby2'
-          },
-          where:{
-            id:""
-          }
-        }
-      }
-    },
-  });
-
-  console.log("Seeder completed");
-}
-
-async function roomSeeder() {
-
-  await prisma.room.create({
-    data: {
-      name: "Pondzza007",
-    },
-  });
-
-  console.log("Room seeder is completed.");
-}
-
-// const rooms: Record<string, any> = {};
-
-// io.on("connection", (socket) => {
-//   console.log(socket.id)
-//   socket.on("set name", (name) => {
-//     socket.data.name = name;
-//     socket.emit("server_response", "You name has been set.");
-//   });
-
-//   socket.on("create room", (room_name) => {
-//     if (!socket.data.name) return;
-//     if (rooms[room_name]) return;
-
-//     rooms[room_name] = {
-//       name: room_name,
-//       messages: [],
-//       users: [socket.data.name],
-//       background: 'default',
-//     };
-
-//     socket.data.room_name = room_name;
-//     socket.join(room_name);
-//     io.to(socket.data.room_name).emit("room_update", rooms[socket.data.room_name]);
-//     socket.emit("server_response", "You joined " + room_name);
-//     socket.emit("server_response", "Room has been created.");
-//   });
-
-//   socket.on("join room", (room_name) => {
-//     if (!socket.data.name) return;
-//     if (!rooms[room_name]) return;
-
-//     socket.data.room_name = room_name;
-//     socket.join(room_name);
-
-//     rooms[room_name].users.push(socket.data.name);
-
-//     io.to(socket.data.room_name).emit("room_update", rooms[socket.data.room_name]);
-//     socket.emit("server_response", "You joined " + room_name);
-//   });
-
-//   socket.on("message", (message) => {
-//     if (!socket.data.room_name) return;
-
-//     rooms[socket.data.room_name].messages.push(socket.data.name,' : ',message);
-
-//     io.to(socket.data.room_name).emit("room_update", rooms[socket.data.room_name]);
-//   });
-// });
