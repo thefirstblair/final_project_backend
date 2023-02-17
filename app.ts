@@ -15,6 +15,7 @@ const prisma = new PrismaClient();
 const app = express();
 const port = 3001;
 const httpServer = createServer(app);
+
 const io = new Server(httpServer , {
   cors: {
     origin: "http://localhost:3000",
@@ -35,13 +36,13 @@ app.use(
   })
 );
 
-// app.use(
-//   cors({
-//     origin: "http://localhost:3000",
-//     credentials: true,
-//     methods:['GET' , 'POST']
-//   })
-// );
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+    methods:['GET' , 'POST']
+  })
+);
 
 app.use(bodyParser.json());
 app.use("/users", userRouter);
@@ -109,7 +110,7 @@ io.on('connection' , (socket)=> {
     });
 
     socket.data.user = user;
-    socket.emit('user', user);
+    socket.emit('user', socket.data.user);
     console.log('user registered' , socket.data.user);
   });
 
@@ -155,7 +156,7 @@ io.on('connection' , (socket)=> {
   });
 
   socket.on('joinRoom' , async(roomId) => {
-
+    
     try{
       const room = await prisma.room.update({
       where:{
@@ -283,6 +284,10 @@ io.on('connection' , (socket)=> {
       },
     });
     console.log('User disconnected');
+  });
+
+  socket.on('getme' , async() => {
+    socket.emit('me' , )
   });
 });
 
