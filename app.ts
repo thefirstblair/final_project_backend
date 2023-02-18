@@ -50,6 +50,17 @@ app.use("/rooms", roomRouter);
 app.use("/notes", noteRouter);
 app.use("/features", featureRouter);
 
+interface User {
+  id: string;
+  name: string;
+}
+
+interface ChatMessage {
+  id: string;
+  user: User;
+  text: string;
+  createdAt: string;
+}
 
 async function checkRoom(userId : string) {
   try {
@@ -180,6 +191,7 @@ io.on('connection' , (socket)=> {
     socket.emit('room' , room);
     console.log('room that this user in is ' , socket.data.user.roomId);
     io.to(room.id).emit('room' , room);
+
     } catch(err) {
       console.log(err);
     }
@@ -225,18 +237,61 @@ io.on('connection' , (socket)=> {
       },
     });
 
-    socket.emit('message' , {
-      text: message,
-      user: socket.data.user,
-    });
 
     socket.to(room.id).emit('message' , {
       text: message,
       user: socket.data.user,
     });
 
+    socket.emit('message', {
+      text: message,
+      user: socket.data.user,
+    });
+
     console.log('Message = ' , message );
   });
+
+  socket.on("createMessage", async (text: string, roomId: string, userId: string, callback: (message: { id: string, user: { id: string, name: string }, text: string, createdAt: string }) => void) => {
+    const newMessage = await prisma.message.create({
+      data:{
+        text: text,
+        User: {
+          connect:{
+            id: userId,
+          },
+        },
+      },
+    });
+  
+    
+
+    await prisma.room.update({
+      where:{
+        id: roomId,
+      },
+      data:{
+        Message: {
+          connect: {
+            id: newMessage.id,
+          },
+        },
+      },
+    });
+  
+    const message = {
+      id: newMessage.id.toString(),
+      user: {
+        id: socket.data.user.id,
+        name: socket.data.user.name,
+      },
+      text: newMessage.text,
+      createdAt: newMessage.createdAt.toISOString(),
+    };
+  
+    socket.to(roomId).emit("message", message);
+    callback(message);
+  });
+  
 
   socket.on('messageInroom' , async(roomId) => {
     const messageList = await prisma.message.findMany({
@@ -309,9 +364,9 @@ io.on('connection' , (socket)=> {
 
 app.listen(port, async () => {
 
-  // await prisma.message.deleteMany();
-  // await prisma.user.deleteMany();
-  // await prisma.room.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.room.deleteMany();
 
   io.listen(3002);
   console.log("Server is running on http://localhost:" + port);
