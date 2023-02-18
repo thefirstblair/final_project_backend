@@ -125,11 +125,15 @@ io.on('connection' , (socket)=> {
     console.log('RoomList = ' , rooms);
   });
 
-  socket.on('userList' , async() => {
-    const user = await prisma.user.findMany()
+  socket.on('userInroom' , async(roomId) => {
+    const users = await prisma.user.findMany({
+      where:{
+        roomId:roomId,
+      },
+    });
 
-    socket.emit('userList' , user);
-    console.log('userList = ' , user);
+    socket.emit('userList' , users);
+    console.log('userList = ' , users);
   });
 
   socket.on('createRoom' , async(roomName) => {
@@ -228,6 +232,17 @@ io.on('connection' , (socket)=> {
     });
 
     console.log('Message = ' , message );
+  });
+
+  socket.on('messageInroom' , async(roomId) => {
+    const messageList = await prisma.message.findMany({
+      where:{
+        roomId:roomId,
+      },
+    });
+
+    socket.emit('messageList' , messageList);
+    console.log('messageList = ' , messageList);
   });
 
   socket.on('leaveRoom' , async() => {
