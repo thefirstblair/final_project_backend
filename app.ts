@@ -125,7 +125,7 @@ io.on('connection' , (socket)=> {
     console.log('RoomList = ' , rooms);
   });
 
-  socket.on('userInroom' , async(roomId) => {
+  socket.on('userInRoom' , async(roomId) => {
     const users = await prisma.user.findMany({
       where:{
         roomId:roomId,
@@ -180,6 +180,7 @@ io.on('connection' , (socket)=> {
     socket.emit('room' , room);
     console.log('room that this user in is ' , socket.data.user.roomId);
     io.to(room.id).emit('room' , room);
+    socket.emit('userInRoom' , room.id);
     } catch(err) {
       console.log(err);
     }
@@ -238,7 +239,7 @@ io.on('connection' , (socket)=> {
     console.log('Message = ' , message );
   });
 
-  socket.on('messageInroom' , async(roomId) => {
+  socket.on('messageInRoom' , async(roomId) => {
     const messageList = await prisma.message.findMany({
       where:{
         roomId:roomId,
@@ -309,9 +310,9 @@ io.on('connection' , (socket)=> {
 
 app.listen(port, async () => {
 
-  // await prisma.message.deleteMany();
-  // await prisma.user.deleteMany();
-  // await prisma.room.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.room.deleteMany();
 
   io.listen(3002);
   console.log("Server is running on http://localhost:" + port);
