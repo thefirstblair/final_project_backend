@@ -186,7 +186,7 @@ io.on('connection' , (socket)=> {
     
   });
 
-  socket.on('message' , async(message) => {
+  socket.on('sentMessage' , async(message) => {
 
     const room = await prisma.room.findUnique({
       where: {
@@ -225,6 +225,10 @@ io.on('connection' , (socket)=> {
       },
     });
 
+    socket.emit('message' , {
+      text: message,
+      user: socket.data.user,
+    });
 
     socket.to(room.id).emit('message' , {
       text: message,
@@ -299,10 +303,6 @@ io.on('connection' , (socket)=> {
       },
     });
     console.log('User disconnected');
-  });
-
-  socket.on('getme' , async() => {
-    socket.emit('me' , )
   });
 });
 
