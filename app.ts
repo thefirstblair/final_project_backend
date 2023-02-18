@@ -136,7 +136,7 @@ io.on('connection' , (socket)=> {
     console.log('RoomList = ' , rooms);
   });
 
-  socket.on('userInroom' , async(roomId) => {
+  socket.on('userInRoom' , async(roomId) => {
     const users = await prisma.user.findMany({
       where:{
         roomId:roomId,
@@ -191,7 +191,11 @@ io.on('connection' , (socket)=> {
     socket.emit('room' , room);
     console.log('room that this user in is ' , socket.data.user.roomId);
     io.to(room.id).emit('room' , room);
+<<<<<<< HEAD
 
+=======
+    socket.emit('userInRoom' , room.id);
+>>>>>>> 894e00eeea195c4e2a20cae44f8bd8a1bccf6e75
     } catch(err) {
       console.log(err);
     }
@@ -251,6 +255,7 @@ io.on('connection' , (socket)=> {
     console.log('Message = ' , message );
   });
 
+<<<<<<< HEAD
   socket.on("createMessage", async (text: string, roomId: string, userId: string, callback: (message: { id: string, user: { id: string, name: string }, text: string, createdAt: string }) => void) => {
     const newMessage = await prisma.message.create({
       data:{
@@ -294,6 +299,9 @@ io.on('connection' , (socket)=> {
   
 
   socket.on('messageInroom' , async(roomId) => {
+=======
+  socket.on('messageInRoom' , async(roomId) => {
+>>>>>>> 894e00eeea195c4e2a20cae44f8bd8a1bccf6e75
     const messageList = await prisma.message.findMany({
       where:{
         roomId:roomId,
