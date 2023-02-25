@@ -1,4 +1,4 @@
-import { PrismaClient} from "@prisma/client";
+import { PrismaClient, Room} from "@prisma/client";
 import express from "express";
 import bodyParser from "body-parser";
 import userRouter from "./routers/userRouter";
@@ -344,19 +344,32 @@ io.on('connection' , (socket)=> {
   });
 
   socket.on('getPublicRooms' , async() => {
-    const rooms = await prisma.$queryRaw`
-      SELECT *
-      FROM Room
-      WHERE isPrivate = false
-      AND (
-        SELECT COUNT(*)
-        FROM User
-        WHERE User.roomId = Room.id
-      ) < 4
-    `;
-
-    socket.emit('PublicRoomList' , rooms);
-    console.log('Public room = ');
+    
+    const publicRooms = await prisma.room.findMany({
+      where: {
+        isPrivate: false,
+      },
+    });
+    
+    const filteredPublicRooms = await Promise.all(
+      publicRooms.map(async (room) => {
+        const count = await prisma.user.count({
+          where: {
+            roomId: room.id,
+          },
+        });
+        if (count < 4) {
+          return room;
+        }
+        return null;
+      })
+    );
+    
+    const result = filteredPublicRooms.filter((room) => room !== null);
+    
+    socket.emit('PublicRoomList', result);
+    console.log('Public room = ', result);
+    
   });
 
   socket.on('leaveRoom' , async() => {
