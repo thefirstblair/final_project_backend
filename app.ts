@@ -343,6 +343,22 @@ io.on('connection' , (socket)=> {
     console.log('roomSearch = ' , rooms );
   });
 
+  socket.on('getPublicRooms' , async() => {
+    const rooms = await prisma.$queryRaw`
+      SELECT *
+      FROM Room
+      WHERE isPrivate = false
+      AND (
+        SELECT COUNT(*)
+        FROM User
+        WHERE User.roomId = Room.id
+      ) < 4
+    `;
+
+    socket.emit('PublicRoomList' , rooms);
+    console.log('Public room = ');
+  });
+
   socket.on('leaveRoom' , async() => {
     
     const room = await prisma.room.update({
