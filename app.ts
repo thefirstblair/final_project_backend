@@ -62,6 +62,8 @@ interface ChatMessage {
   createdAt: string;
 }
 
+const voiceCallRooms = {};
+
 async function checkRoom(userId : string) {
   try {
     const user = await prisma.user.findUnique({
@@ -305,6 +307,15 @@ io.on('connection' , (socket)=> {
 
   socket.on('getRooms' , async(name: string) => {
 
+    if(name === ""){
+      const rooms = await prisma.room.findMany({
+        include:{
+          user: true,
+        },
+      });
+      socket.emit('roomSearch' , rooms);
+    };
+    
     if(!name){
       console.log('Data is invalid');
       return;
@@ -328,8 +339,8 @@ io.on('connection' , (socket)=> {
       return;
     }
 
-    socket.emit('room' , rooms);
-    console.log('room = ' , rooms );
+    socket.emit('roomSearch' , rooms);
+    console.log('roomSearch = ' , rooms );
   });
 
   socket.on('leaveRoom' , async() => {
