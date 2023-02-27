@@ -343,6 +343,7 @@ io.on('connection' , (socket)=> {
     console.log('roomSearch = ' , rooms );
   });
 
+
   // still not working!
   socket.on('getPublic' , async() => {
     
@@ -371,6 +372,22 @@ io.on('connection' , (socket)=> {
     socket.emit('PublicRoomList', result);
     console.log('Public room = ', result);
     
+
+  socket.on('getPublicRooms' , async() => {
+    const rooms = await prisma.$queryRaw`
+      SELECT *
+      FROM Room
+      WHERE isPrivate = false
+      AND (
+        SELECT COUNT(*)
+        FROM User
+        WHERE User.roomId = Room.id
+      ) < 4
+    `;
+
+    socket.emit('PublicRoomList' , rooms);
+    console.log('Public room = ');
+
   });
 
   //use this for get all of public room (not filter room).
@@ -459,11 +476,10 @@ io.on('connection' , (socket)=> {
 
 app.listen(port, async () => {
 
-  // await prisma.message.deleteMany();
-  // await prisma.user.deleteMany();
-  // await prisma.room.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.room.deleteMany();
 
   io.listen(3002);
   console.log("Server is running on http://localhost:" + port);
 });
-
