@@ -1,4 +1,4 @@
-import { PrismaClient} from "@prisma/client";
+import { PrismaClient, Room} from "@prisma/client";
 import express from "express";
 import bodyParser from "body-parser";
 import userRouter from "./routers/userRouter";
@@ -355,7 +355,7 @@ io.on('connection' , (socket)=> {
       ) < 4
     `;
 
-    socket.emit('publicRoomList' , rooms);
+    socket.emit('PublicRoomList' , rooms);
     console.log('Public room = ');
   });
 
