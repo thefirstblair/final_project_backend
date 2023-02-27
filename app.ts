@@ -355,7 +355,7 @@ io.on('connection' , (socket)=> {
       ) < 4
     `;
 
-    socket.emit('PublicRoomList' , rooms);
+    socket.emit('publicRoomList' , rooms);
     console.log('Public room = ');
   });
 
@@ -422,9 +422,9 @@ io.on('connection' , (socket)=> {
 
 app.listen(port, async () => {
 
-  // await prisma.message.deleteMany();
-  // await prisma.user.deleteMany();
-  // await prisma.room.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.room.deleteMany();
 
   io.listen(3002);
   console.log("Server is running on http://localhost:" + port);
