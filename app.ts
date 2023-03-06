@@ -145,7 +145,8 @@ io.on('connection' , (socket)=> {
       },
     });
 
-    socket.emit('userList' , users);
+    //socket.emit('userList' , users);
+    socket.to(roomId).emit('userList' , users);
     console.log('userList = ' , users);
   });
 
@@ -341,53 +342,6 @@ io.on('connection' , (socket)=> {
 
     socket.emit('roomSearch' , rooms);
     console.log('roomSearch = ' , rooms );
-  });
-
-
-  // still not working!
-  socket.on('getPublic' , async() => {
-    
-    const publicRooms = await prisma.room.findMany({
-      where: {
-        isPrivate: false,
-      },
-    });
-    
-    const filteredPublicRooms = await Promise.all(
-      publicRooms.map(async (room) => {
-        const count = await prisma.user.count({
-          where: {
-            roomId: room.id,
-          },
-        });
-        if (count < 4) {
-          return room;
-        }
-        return null;
-      })
-    );
-    
-    const result = filteredPublicRooms.filter((room) => room !== null);
-    
-    socket.emit('PublicRoomList', result);
-    console.log('Public room = ', result);
-    
-
-  socket.on('getPublicRooms' , async() => {
-    const rooms = await prisma.$queryRaw`
-      SELECT *
-      FROM Room
-      WHERE isPrivate = false
-      AND (
-        SELECT COUNT(*)
-        FROM User
-        WHERE User.roomId = Room.id
-      ) < 4
-    `;
-
-    socket.emit('PublicRoomList' , rooms);
-    console.log('Public room = ');
-
   });
 
   //use this for get all of public room (not filter room).
