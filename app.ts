@@ -146,11 +146,11 @@ io.on('connection' , (socket)=> {
     });
 
     //socket.emit('userList' , users);
-    socket.to(roomId).emit('userList' , users);
+    io.to(roomId).emit('userList' , users);
     console.log('userList = ' , users);
   });
 
-  socket.on('createRoom' , async(roomName) => {
+  socket.on('createRoom' , async(roomName , isPrivate) => {
     if (!roomName || !socket.data.user){
       return;
     }
@@ -158,6 +158,7 @@ io.on('connection' , (socket)=> {
     const room = await prisma.room.create({
       data:{
         name: roomName,
+        isPrivate:isPrivate,
         user: {
           connect: {
             id : socket.data.user.id,
