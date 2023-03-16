@@ -5,6 +5,8 @@ import userRouter from "./routers/userRouter";
 import roomRouter from "./routers/roomRouter";
 import noteRouter from "./routers/noteRouter";
 import featureRouter from "./routers/featureRouter";
+import calendarRouter from "./routers/calendarRouter";
+
 import cookieSession from "cookie-session";
 import cors from "cors";
 import { Server } from "socket.io";
@@ -49,6 +51,7 @@ app.use("/users", userRouter);
 app.use("/rooms", roomRouter);
 app.use("/notes", noteRouter);
 app.use("/features", featureRouter);
+app.use("/calendars", calendarRouter);
 
 interface User {
   id: string;
@@ -437,7 +440,7 @@ io.on('connection' , (socket)=> {
         id: socket.data.user.id,
       },
       data: {
-        refreshToken:token,
+        refreshToken: token,
       },
     });
   });
