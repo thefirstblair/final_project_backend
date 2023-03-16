@@ -205,6 +205,17 @@ io.on('connection' , (socket)=> {
     
   });
 
+  socket.on('getMe' , async() => {
+    const user = await prisma.user.findUnique({
+      where:{
+        id:socket.data.user.id
+      },
+    });
+
+    socket.emit('me' , user);
+
+  });
+
   socket.on('sentMessage' , async(message) => {
 
     const room = await prisma.room.findUnique({
@@ -443,6 +454,9 @@ io.on('connection' , (socket)=> {
         refreshToken: token,
       },
     });
+
+    socket.emit('updateTokenComplete' , user);
+    console.log('Update token on user complete.');
   });
   
 });

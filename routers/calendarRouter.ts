@@ -1,8 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 import express from "express";
+import { io } from "socket.io-client";
 
+
+const socket = io('http://localhost:3002');
 const calendarRouter = express.Router()
 const prisma = new PrismaClient();
+socket.emit("getMe",'a');
+socket.on("me", (data: any) => {
+    socket.data.user = data;
+});
 const { google } = require('googleapis')
 
 const GOOGLE_CLIENT_ID = "773809841935-i4gvn4vtuh2pef46juqsfpn0vt01iliv.apps.googleusercontent.com"
