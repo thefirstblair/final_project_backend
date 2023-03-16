@@ -1,15 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import express from "express";
-import { io } from "socket.io-client";
 
 
-const socket = io('http://localhost:3002');
 const calendarRouter = express.Router()
 const prisma = new PrismaClient();
-socket.emit("getMe",'a');
-socket.on("me", (data: any) => {
-    socket.data.user = data;
-});
+
 const { google } = require('googleapis')
 
 const GOOGLE_CLIENT_ID = "773809841935-i4gvn4vtuh2pef46juqsfpn0vt01iliv.apps.googleusercontent.com"
@@ -30,8 +25,20 @@ const oauth2Client = new google.auth.OAuth2(
 
 calendarRouter.post('/create-tokens', async (req, res, next) => {
     try {
+        const { id } = req.body
         const { code } = req.body
         const { tokens } = await oauth2Client.getToken(code)
+        try {
+            const user = await prisma.user.update({
+                where: {
+                    id: id
+                },
+                data: {
+                    refreshToken: tokens.refreshToken
+                }
+            });
+        } catch (error) {
+        }
         res.send(tokens)
     } catch (error) {
         next(error)
@@ -40,8 +47,11 @@ calendarRouter.post('/create-tokens', async (req, res, next) => {
 
 calendarRouter.post('/create-event', async (req, res, next) => {
     try {
-        const { summary, description, place, startDateTime, endDateTime } = req.body
-        oauth2Client.setCredentials({refreshToken: REFRESH_TOKEN})
+        const { summary, description, place, startDateTime, endDateTime, id } = req.body
+        console.log(id)
+        const user = await prisma.user.findUnique({where : {id}})
+        console.log(user)
+        oauth2Client.setCredentials({ refreshToken: user?.refreshToken })
         const calendar = google.calendar('v3')
         const response = await calendar.events.insert({
             auth: oauth2Client,
@@ -50,7 +60,7 @@ calendarRouter.post('/create-event', async (req, res, next) => {
                 summary: summary,
                 description: description,
                 location: place,
-                colorId: '6', 
+                colorId: '6',
                 // colorId : 1 blue, 2 green, 3 purple, 4 red, 5 yellow, 6 orange
                 start: {
                     dateTime: new Date(startDateTime)
@@ -59,8 +69,8 @@ calendarRouter.post('/create-event', async (req, res, next) => {
                     dateTime: new Date(endDateTime)
                 },
                 attendees: [
-                    {email: "phantouch.s@ku.th"},
-                    {email: "thyrnf@gmail.com"}
+                    { email: "phantouch.s@ku.th" },
+                    { email: "thyrnf@gmail.com" }
                 ]
             }
         })
