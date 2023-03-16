@@ -113,15 +113,26 @@ async function checkRoom(userId : string) {
 io.on('connection' , (socket)=> {
   console.log(`User connected ${socket.id}`);
 
-  socket.on('register' , async(name) => {
+  socket.on('register' , async(name , email) => {
 
     if(!name){
-      return;
+      socket.emit('resultRegister', 'Name must not empty.');
+      return 'Name must not empty.';
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { name },
+    });
+
+    if (existingUser) {
+      socket.emit('resultRegister', 'A user with that name already exists');
+      return 'A user with that name already exists';
     }
     
     const user = await prisma.user.create({
       data:{
         name,
+        email,
       },
     });
 
@@ -151,6 +162,21 @@ io.on('connection' , (socket)=> {
     //socket.emit('userList' , users);
     io.to(roomId).emit('userList' , users);
     console.log('userList = ' , users);
+  });
+
+  // get all people in room except yourself.
+  socket.on('getPeopleInRoom' , async(roomId: string, userId: string) => {
+
+    const users = await prisma.user.findMany({
+      where: {
+        roomId,
+        NOT: {
+          id: userId,
+        },
+      },
+    });
+  
+    socket.emit('peopleInRoom', users);
   });
 
   socket.on('createRoom' , async(roomName , isPrivate) => {
