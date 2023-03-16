@@ -426,6 +426,22 @@ io.on('connection' , (socket)=> {
     });
     console.log('User disconnected');
   });
+
+  socket.on('updateRefreshTokenUser' , async(token : string) => {
+    if(!socket.data.user){
+      return;
+    }
+
+    const user = await prisma.user.update({
+      where: {
+        id: socket.data.user.id,
+      },
+      data: {
+        refreshToken:token,
+      },
+    });
+  });
+  
 });
 
 
