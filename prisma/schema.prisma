@@ -16,6 +16,7 @@ model User {
   room Room?           @relation(fields: [roomId], references: [id] , onDelete: Cascade)
   roomId String?
   Message   Message[]
+  refreshToken String?
 }
 
 model Room {
