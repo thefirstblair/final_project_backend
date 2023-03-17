@@ -137,8 +137,9 @@ io.on('connection' , (socket)=> {
     });
 
     socket.data.user = user;
-    socket.emit('user', socket.data.user);
-    socket.emit('resultRegister', 2);
+    // socket.emit('resultRegister', 2);
+    socket.emit('resultRegister', socket.data.user);
+    // socket.emit('user', socket.data.user);
     console.log('user registered' , socket.data.user);
   });
 
