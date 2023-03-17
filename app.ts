@@ -429,7 +429,6 @@ io.on('connection' , (socket)=> {
     });
 
 
-
     socket.leave(room.id);
     socket.data.user.roomId = null;
     io.to(room.id).emit('room' , room);
