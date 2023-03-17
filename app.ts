@@ -116,7 +116,7 @@ io.on('connection' , (socket)=> {
   socket.on('register' , async(name , email) => {
 
     if(!name){
-      socket.emit('resultRegister', 'Name must not empty.');
+      socket.emit('resultRegister', 0);
       return 'Name must not empty.';
     }
 
@@ -125,7 +125,7 @@ io.on('connection' , (socket)=> {
     });
 
     if (existingUser) {
-      socket.emit('resultRegister', 'A user with that name already exists');
+      socket.emit('resultRegister', 1);
       return 'A user with that name already exists';
     }
     
@@ -429,7 +429,7 @@ io.on('connection' , (socket)=> {
     socket.data.user.roomId = null;
     checkRoom(socket.data.user.id);
     io.to(room.id).emit('room' , room);
-
+    socket.to(room.id).emit('userInRoom' , room.id);
   });
   
   socket.on('disconnect' , async () => {
