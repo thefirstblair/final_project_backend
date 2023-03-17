@@ -224,7 +224,7 @@ io.on('connection' , (socket)=> {
     socket.emit('room' , room);
     console.log('room that this user in is ' , socket.data.user.roomId);
     io.to(room.id).emit('room' , room);
-    socket.emit('userInRoom' , room.id);
+    socket.to(room.id).emit('userInRoom' , room.id);
     } catch(err) {
       console.log(err);
     }
