@@ -143,16 +143,16 @@ io.on('connection' , (socket)=> {
     console.log('user registered' , socket.data.user);
   });
 
-  socket.on('roomList' , async() => {
-    const rooms = await prisma.room.findMany({
-      include:{
-        user: true,
-      },
-    });
+  // socket.on('roomList' , async() => {
+  //   const rooms = await prisma.room.findMany({
+  //     include:{
+  //       user: true,
+  //     },
+  //   });
 
-    socket.emit('roomList' , rooms);
-    console.log('RoomList = ' , rooms);
-  });
+  //   socket.emit('roomList' , rooms);
+  //   console.log('RoomList = ' , rooms);
+  // });
 
   socket.on('userInRoom' , async(roomId) => {
     const users = await prisma.user.findMany({
@@ -389,12 +389,15 @@ io.on('connection' , (socket)=> {
 
   //use this for get all of public room (not filter room).
   socket.on('getPublicRoom' , async() => {
-    const publicRooms = await prisma.room.findMany({
+    const rooms = await prisma.room.findMany({
       where: {
         isPrivate: false,
       },
+      include:{
+        user:true
+      }
     });
-    socket.emit('roomList' , publicRooms);
+    socket.emit('roomList' , rooms);
   });
 
   //get room with id (sent array in for working).
