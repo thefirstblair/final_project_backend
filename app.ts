@@ -432,9 +432,9 @@ io.on('connection' , (socket)=> {
 
     socket.leave(room.id);
     socket.data.user.roomId = null;
-    checkRoom(socket.data.user.id);
     io.to(room.id).emit('room' , room);
     socket.to(room.id).emit('userInRoom' , room.id);
+    checkRoom(socket.data.user.id);
   });
   
   socket.on('disconnect' , async () => {
