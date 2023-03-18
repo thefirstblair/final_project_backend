@@ -429,11 +429,10 @@ io.on('connection' , (socket)=> {
     });
 
 
-    socket.leave(room.id);
-    socket.data.user.roomId = null;
     io.to(room.id).emit('room' , room);
     socket.to(room.id).emit('userInRoom' , room.id);
-    checkRoom(socket.data.user.id);
+    socket.leave(room.id);
+    socket.data.user.roomId = null;
   });
   
   socket.on('disconnect' , async () => {
@@ -458,9 +457,16 @@ io.on('connection' , (socket)=> {
         },
       });
 
-      socket.leave(room.id);
+      await prisma.user.delete({
+        where:{
+          id:socket.data.user.id
+        }
+      });
+
       io.to(room.id).emit('room' , room);
       socket.emit('room' , room);
+      socket.leave(room.id);
+
     }
 
     await prisma.user.delete({
