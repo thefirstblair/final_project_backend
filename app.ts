@@ -68,46 +68,46 @@ interface ChatMessage {
 const voiceCallRooms = {};
 
 async function checkRoom(userId : string) {
-  try {
-    const user = await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-    });
+  // try {
+  //   const user = await prisma.user.findUnique({
+  //     where: {
+  //       id: userId,
+  //     },
+  //   });
 
-    if(!user){
-      return ;
-    }
+  //   if(!user){
+  //     return ;
+  //   }
 
-    if(!user.roomId) {
-      return ;
-    }
+  //   if(!user.roomId) {
+  //     return ;
+  //   }
 
-    const room = await prisma.room.findUnique({
-      where: {
-        id: user.roomId,
-      },
-      include: {
-        user: true,
-      },
-    });
+  //   const room = await prisma.room.findUnique({
+  //     where: {
+  //       id: user.roomId,
+  //     },
+  //     include: {
+  //       user: true,
+  //     },
+  //   });
 
-    if(!room){
-      return ;
-    }
+  //   if(!room){
+  //     return ;
+  //   }
 
-    if(room.user.length === 0) {
-      await prisma.room.delete({
-        where:{
-          id: room.id
-        },
-      });
+  //   if(room.user.length === 0) {
+  //     await prisma.room.delete({
+  //       where:{
+  //         id: room.id
+  //       },
+  //     });
 
-      io.emit('roomList' , await prisma.room.findMany());
-    }
-  } catch(err) {
-    console.log(err);
-  }
+  //     io.emit('roomList' , await prisma.room.findMany());
+  //   }
+  // } catch(err) {
+  //   console.log(err);
+  // }
 }
 
 io.on('connection' , (socket)=> {
@@ -466,7 +466,6 @@ io.on('connection' , (socket)=> {
       io.to(room.id).emit('room' , room);
       socket.emit('room' , room);
       socket.leave(room.id);
-
     }
 
     await prisma.user.delete({
@@ -474,7 +473,15 @@ io.on('connection' , (socket)=> {
         id: socket.data.user.id,
       },
     });
+
     console.log('User disconnected');
+
+  });
+
+  socket.on('gif' , async(link , type) => {
+    
+    socket.to(socket.data.user.roomId).emit('gifCallback',link , type)
+  
   });
 
   socket.on('updateRefreshTokenUser' , async(token : string) => {
