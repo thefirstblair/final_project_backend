@@ -47,7 +47,7 @@ calendarRouter.post('/create-tokens', async (req, res, next) => {
 
 calendarRouter.post('/create-event', async (req, res, next) => {
     try {
-        const { summary, description, place, startDateTime, endDateTime, id } = req.body
+        const { summary, description, place, startDateTime, endDateTime, id, attendeesMail } = req.body
         console.log(id)
         const user = await prisma.user.findUnique({ where: { id } })
         oauth2Client.setCredentials({ refresh_token: user?.refreshToken })
@@ -67,10 +67,7 @@ calendarRouter.post('/create-event', async (req, res, next) => {
                 end: {
                     dateTime: new Date(endDateTime)
                 },
-                attendees: [
-                    { email: "phantouch.s@ku.th" },
-                    { email: "thyrnf@gmail.com" }
-                ]
+                attendees: attendeesMail
             }
         })
         res.send(response)
