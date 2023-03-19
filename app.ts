@@ -514,7 +514,7 @@ io.on('connection' , (socket)=> {
         room:{
           connect:{id:roomId}
         },
-        createdAt:Date.toString(),
+        createdAt:new Date()
       },
     });
 
@@ -531,21 +531,24 @@ io.on('connection' , (socket)=> {
       socket.emit('resultAnnouncement' , 'Room data invalid');
       return ;
     }
-
-    await prisma.room.update({
-      where:{
-        id: roomId,
-      },
-      data:{
-        note: {
-          connect: {
-            id: newNote.id,
+    try {
+      await prisma.room.update({
+        where:{
+          id: roomId,
+        },
+        data:{
+          note: {
+            connect: {
+              id: newNote.id,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (error) {
+      console.log(error);
+    }
 
-    socket.to(room.id).emit('resultAnnouncement' , newNote);
+    socket.emit('resultAnnouncement' , newNote);
     console.log('New note = ' , newNote);
 
   });
