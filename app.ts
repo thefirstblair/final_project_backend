@@ -494,7 +494,7 @@ io.on('connection' , (socket)=> {
     console.log('Update token on user complete.');
   });
 
-  socket.on('announcement' , async( roomId :string , userId: string , name: string , text: string , createdAt: string ,) => {
+  socket.on('announcement' , async( roomId :string , userId: string , name: string , text: string  ,) => {
 
     const user = await prisma.user.findUnique({
       where:{
@@ -514,7 +514,7 @@ io.on('connection' , (socket)=> {
         room:{
           connect:{id:roomId}
         },
-        createdAt:createdAt
+        createdAt:Date.toString(),
       },
     });
 
