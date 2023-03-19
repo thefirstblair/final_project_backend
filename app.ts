@@ -283,7 +283,6 @@ io.on('connection' , (socket)=> {
       },
     });
 
-
     socket.to(room.id).emit('message' , {
       text: message,
       user: socket.data.user,
@@ -428,10 +427,9 @@ io.on('connection' , (socket)=> {
       },
     });
 
-
+    socket.leave(room.id);
     io.to(room.id).emit('room' , room);
     socket.to(room.id).emit('userInRoom' , room.id);
-    socket.leave(room.id);
     socket.data.user.roomId = null;
   });
   
@@ -478,12 +476,6 @@ io.on('connection' , (socket)=> {
 
   });
 
-  socket.on('gif' , async(link , type) => {
-    
-    socket.to(socket.data.user.roomId).emit('gifCallback',link , type)
-  
-  });
-
   socket.on('updateRefreshTokenUser' , async(token : string) => {
     if(!socket.data.user){
       return;
@@ -501,7 +493,64 @@ io.on('connection' , (socket)=> {
     socket.emit('updateTokenComplete' , user);
     console.log('Update token on user complete.');
   });
+
+  socket.on('announcement' , async( roomId :string , userId: string , name: string , text: string , createdAt: string ,) => {
+
+    const user = await prisma.user.findUnique({
+      where:{
+        id:userId
+      }
+    });
+
+    if (!user) {
+      socket.emit('resultAnnouncement' , 'User data invalid');
+      return ;
+    }
+
+    const newNote = await prisma.note.create({
+      data:{
+        owner_name: user.name,
+        textNote:text,
+        room:{
+          connect:{id:roomId}
+        },
+        createdAt:createdAt
+      },
+    });
+
+    const room = await prisma.room.findUnique({
+      where: {
+        id: socket.data.user.roomId,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!room) {
+      socket.emit('resultAnnouncement' , 'Room data invalid');
+      return ;
+    }
+
+    await prisma.room.update({
+      where:{
+        id: roomId,
+      },
+      data:{
+        note: {
+          connect: {
+            id: newNote.id,
+          },
+        },
+      },
+    });
+
+    socket.to(room.id).emit('resultAnnouncement' , newNote);
+    console.log('New note = ' , newNote);
+
+  });
   
+
 });
 
 
