@@ -603,7 +603,7 @@ io.on('connection' , (socket)=> {
     });
 
     socket.data.survey = createdSurvey;
-    socket.emit('resultCreateSurvey' , createdSurvey);
+    socket.to(socket.data.roomId).emit('resultCreateSurvey' , createdSurvey);
     
   });
   
