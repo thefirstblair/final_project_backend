@@ -66,7 +66,7 @@ interface ChatMessage {
 }
 
 interface ChoiceData {
-  ChoiceText: string;
+  ChoiceText: String;
 }
 
 const voiceCallRooms = {};
@@ -556,12 +556,14 @@ io.on('connection' , (socket)=> {
 
   });
 
-  socket.on('createSurvey' , async( question: string , choice: ChoiceData[]) => {
+  socket.on('createSurvey' , async( question: string , choice: string[]) => {
 
     if(!choice){
       socket.emit('resultCreateSurvey' , 'Choice data is invalid.');
       return ;
     }
+
+    console.log(choice);
 
     if(!question){
       socket.emit('resultCreateSurvey' , 'Question data is invalid.');
@@ -576,10 +578,10 @@ io.on('connection' , (socket)=> {
     });
 
     for (let i = 0; i < choice.length; i++) {
-
+      let s = choice[i];
       const createChoice = await prisma.choice.create({
         data:{
-          text:choice[i].ChoiceText,
+          text:s,
           survey:{
             connect:{
               id:survey.id
