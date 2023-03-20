@@ -609,7 +609,11 @@ io.on('connection' , (socket)=> {
     });
 
     socket.data.survey = createdSurvey;
-    io.to(socket.data.user.roomId).emit('resultCreateSurvey', createdSurvey?.question , choiceSurvey);
+    socket.data.survey.question = createdSurvey?.question;
+    io.to(socket.data.user.roomId).emit('resultCreateSurvey', {
+      question: socket.data.survey.question,
+      choiceSurvey: choiceSurvey
+  });
     console.log(socket.data.survey);
   });
 
