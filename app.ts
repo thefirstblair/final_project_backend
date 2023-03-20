@@ -1,4 +1,4 @@
-import { PrismaClient, Room} from "@prisma/client";
+import { Choice, PrismaClient, Room} from "@prisma/client";
 import express from "express";
 import bodyParser from "body-parser";
 import userRouter from "./routers/userRouter";
@@ -63,6 +63,10 @@ interface ChatMessage {
   user: User;
   text: string;
   createdAt: string;
+}
+
+interface ChoiceData {
+  ChoiceText: string;
 }
 
 const voiceCallRooms = {};
@@ -428,9 +432,10 @@ io.on('connection' , (socket)=> {
     });
 
     socket.leave(room.id);
+    socket.data.user.roomId = null;
     io.to(room.id).emit('room' , room);
     socket.to(room.id).emit('userInRoom' , room.id);
-    socket.data.user.roomId = null;
+    checkRoom(socket.data.user.id);
   });
   
   socket.on('disconnect' , async () => {
@@ -455,15 +460,11 @@ io.on('connection' , (socket)=> {
         },
       });
 
-      await prisma.user.delete({
-        where:{
-          id:socket.data.user.id
-        }
-      });
+      socket.leave(room.id);
 
       io.to(room.id).emit('room' , room);
       socket.emit('room' , room);
-      socket.leave(room.id);
+      
     }
 
     await prisma.user.delete({
@@ -548,8 +549,66 @@ io.on('connection' , (socket)=> {
       console.log(error);
     }
 
-    socket.emit('resultAnnouncement' , newNote);
+    //socket.emit('resultAnnouncement' , newNote);
+    socket.to(roomId).emit('resultAnnouncement', newNote);
     console.log('New note = ' , newNote);
+
+
+  });
+
+  socket.on('createSurvey' , async( question: string , choice: ChoiceData[]) => {
+
+    if(!choice){
+      socket.emit('resultCreateSurvey' , 'Choice data is invalid.');
+      return ;
+    }
+
+    if(!question){
+      socket.emit('resultCreateSurvey' , 'Question data is invalid.');
+      return ;
+    }
+
+
+    const survey = await prisma.survey.create({
+      data:{
+        question,
+      }
+    });
+
+    for (let i = 0; i < choice.length; i++) {
+
+      const createChoice = await prisma.choice.create({
+        data:{
+          text:choice[i].ChoiceText,
+          survey:{
+            connect:{
+              id:survey.id
+            }
+          }
+          
+        },
+        
+      });
+
+      const createdSurvey = await prisma.survey.findUnique({
+        where:{
+          id:survey.id
+        },
+        include:{
+          choices:true
+        }
+      });
+
+      socket.data.survey = createdSurvey;
+
+      socket.emit('resultCreateSurvey' , createdSurvey);
+
+    }
+    
+    
+    
+    
+
 
   });
   

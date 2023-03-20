@@ -50,3 +50,18 @@ model Message {
   roomId    String?
 }
 
+model Survey {
+  id        Int      @id @default(autoincrement())
+  question  String
+  choices   Choice[]
+}
+
+model Choice {
+  id        Int      @id @default(autoincrement())
+  text      String
+  survey    Survey   @relation(fields: [surveyId], references: [id])
+  surveyId  Int
+}
+
+
+
