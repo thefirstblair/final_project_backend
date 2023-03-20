@@ -579,7 +579,7 @@ io.on('connection' , (socket)=> {
 
     for (let i = 0; i < choice.length; i++) {
       let s = choice[i];
-      const createChoice = await prisma.choice.create({
+      await prisma.choice.create({
         data:{
           text:s,
           survey:{
@@ -591,27 +591,20 @@ io.on('connection' , (socket)=> {
         },
         
       });
-
-      const createdSurvey = await prisma.survey.findUnique({
-        where:{
-          id:survey.id
-        },
-        include:{
-          choices:true
-        }
-      });
-
-      socket.data.survey = createdSurvey;
-
-      socket.emit('resultCreateSurvey' , createdSurvey);
-
     }
-    
-    
-    
-    
 
+    const createdSurvey = await prisma.survey.findFirst({
+      where:{
+        id:survey.id
+      },
+      include:{
+        choices:true
+      }
+    });
 
+    socket.data.survey = createdSurvey;
+    socket.emit('resultCreateSurvey' , createdSurvey);
+    
   });
   
 
