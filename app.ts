@@ -602,10 +602,18 @@ io.on('connection' , (socket)=> {
       }
     });
 
+    const choiceSurvey = await prisma.choice.findMany({
+      where:{
+        surveyId:survey.id
+      },
+    });
+
     socket.data.survey = createdSurvey;
-    io.to(socket.data.user.roomId).emit('resultCreateSurvey', socket.data.survey);
+    io.to(socket.data.user.roomId).emit('resultCreateSurvey', createdSurvey?.question , choiceSurvey);
     console.log(socket.data.survey);
   });
+
+  
 
   socket.on('submitResponse', async (choiceId: number) => {
     await prisma.choice.update({
