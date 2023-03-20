@@ -434,7 +434,7 @@ io.on('connection' , (socket)=> {
     socket.leave(room.id);
     socket.data.user.roomId = null;
     io.to(room.id).emit('room' , room);
-    socket.to(room.id).emit('userInRoom' , room.id);
+    io.to(room.id).emit('userInRoom' , room.id);
     checkRoom(socket.data.user.id);
   });
   
@@ -550,7 +550,7 @@ io.on('connection' , (socket)=> {
     }
 
     //socket.emit('resultAnnouncement' , newNote);
-    socket.to(roomId).emit('resultAnnouncement', newNote);
+    io.to(roomId).emit('resultAnnouncement', newNote);
     console.log('New note = ' , newNote);
 
 
@@ -603,8 +603,19 @@ io.on('connection' , (socket)=> {
     });
 
     socket.data.survey = createdSurvey;
-    socket.to(socket.data.roomId).emit('resultCreateSurvey' , createdSurvey);
-    
+    io.to(socket.data.roomId).emit('resultCreateSurvey', createdSurvey);
+    console.log(socket.data.survey);
+  });
+
+  socket.on('submitResponse', async (choiceId: number) => {
+    await prisma.choice.update({
+      where: { id: choiceId },
+      data: {
+        vote: {
+          increment: 1,
+        },
+      },
+    });
   });
   
 
