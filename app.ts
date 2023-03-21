@@ -72,46 +72,46 @@ interface ChoiceData {
 const voiceCallRooms = {};
 
 async function checkRoom(userId : string) {
-  // try {
-  //   const user = await prisma.user.findUnique({
-  //     where: {
-  //       id: userId,
-  //     },
-  //   });
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
 
-  //   if(!user){
-  //     return ;
-  //   }
+    if(!user){
+      return ;
+    }
 
-  //   if(!user.roomId) {
-  //     return ;
-  //   }
+    if(!user.roomId) {
+      return ;
+    }
 
-  //   const room = await prisma.room.findUnique({
-  //     where: {
-  //       id: user.roomId,
-  //     },
-  //     include: {
-  //       user: true,
-  //     },
-  //   });
+    const room = await prisma.room.findUnique({
+      where: {
+        id: user.roomId,
+      },
+      include: {
+        user: true,
+      },
+    });
 
-  //   if(!room){
-  //     return ;
-  //   }
+    if(!room){
+      return ;
+    }
 
-  //   if(room.user.length === 0) {
-  //     await prisma.room.delete({
-  //       where:{
-  //         id: room.id
-  //       },
-  //     });
+    if(room.user.length === 0) {
+      await prisma.room.delete({
+        where:{
+          id: room.id
+        },
+      });
 
-  //     io.emit('roomList' , await prisma.room.findMany());
-  //   }
-  // } catch(err) {
-  //   console.log(err);
-  // }
+      io.emit('roomList' , await prisma.room.findMany());
+    }
+  } catch(err) {
+    console.log(err);
+  }
 }
 
 io.on('connection' , (socket)=> {
@@ -557,6 +557,13 @@ io.on('connection' , (socket)=> {
 
   socket.on('createSurvey' , async( question: string , choice: string[]) => {
 
+    interface Result {
+      id: number;
+      text: string;
+      votes: number;
+      percentage?: number;
+    }
+
     if(!choice){
       socket.emit('resultCreateSurvey' , 'Choice data is invalid.');
       return ;
@@ -607,11 +614,24 @@ io.on('connection' , (socket)=> {
       },
     });
 
+    const choiceData: Result[] = [];
+
+  for (let i = 0; i < choiceSurvey.length; i++) {
+    const ch = choiceSurvey[i];
+    const result: Result = {
+      id: ch.id,
+      text: ch.text,
+      votes: ch.votes || 0,
+      percentage: ch.percentage || 0
+    };
+    choiceData.push(result);
+  }
+
     socket.data.survey = createdSurvey;
     socket.data.survey.question = createdSurvey?.question;
     io.to(socket.data.user.roomId).emit('resultCreateSurvey', {
       question: socket.data.survey.question,
-      choiceSurvey: choiceSurvey
+      choiceSurvey: choiceData
   });
     console.log(socket.data.survey);
   });
@@ -620,7 +640,7 @@ io.on('connection' , (socket)=> {
     await prisma.choice.update({
       where: { id: choiceId },
       data: {
-        vote: {
+        votes: {
           increment: 1,
         },
       },
