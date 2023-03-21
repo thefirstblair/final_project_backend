@@ -619,7 +619,8 @@ io.on('connection' , (socket)=> {
   for (let i = 0; i < choiceSurvey.length; i++) {
     const ch = choiceSurvey[i];
     const result: Result = {
-      id: ch.id,
+      // id: ch.id,
+      id: i,
       text: ch.text,
       votes: ch.votes || 0,
       percentage: ch.percentage || 0
