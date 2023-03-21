@@ -649,6 +649,9 @@ io.on('connection' , (socket)=> {
         },
       },
     });
+
+    io.to(socket.data.user.roomId).emit('resultSummitRes' , choiceId);
+
   });
   
 
