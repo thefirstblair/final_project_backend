@@ -550,9 +550,8 @@ io.on('connection' , (socket)=> {
     }
 
     //socket.emit('resultAnnouncement' , newNote);
-    io.to(roomId).emit('resultAnnouncement', newNote);
+    io.to(socket.data.user.roomId).emit('resultAnnouncement', newNote);
     console.log('New note = ' , newNote);
-
 
   });
 
@@ -616,8 +615,6 @@ io.on('connection' , (socket)=> {
   });
     console.log(socket.data.survey);
   });
-
-  
 
   socket.on('submitResponse', async (choiceId: number) => {
     await prisma.choice.update({

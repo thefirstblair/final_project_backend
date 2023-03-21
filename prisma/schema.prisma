@@ -61,7 +61,8 @@ model Choice {
   text      String
   survey    Survey   @relation(fields: [surveyId], references: [id])
   surveyId  Int
-  vote      Int?     @default(0)
+  votes      Int?    @default(0)
+  percentage Int?    @default(0)
 }
 
 
