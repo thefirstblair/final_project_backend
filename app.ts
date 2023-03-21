@@ -562,6 +562,7 @@ io.on('connection' , (socket)=> {
       text: string;
       votes: number;
       percentage?: number;
+      realId : number
     }
 
     if(!choice){
@@ -623,7 +624,8 @@ io.on('connection' , (socket)=> {
       id: i,
       text: ch.text,
       votes: ch.votes || 0,
-      percentage: ch.percentage || 0
+      percentage: ch.percentage || 0,
+      realId : ch.id,
     };
     choiceData.push(result);
   }
@@ -638,6 +640,7 @@ io.on('connection' , (socket)=> {
   });
 
   socket.on('submitResponse', async (choiceId: number) => {
+
     await prisma.choice.update({
       where: { id: choiceId },
       data: {
