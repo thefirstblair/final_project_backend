@@ -65,8 +65,11 @@ interface ChatMessage {
   createdAt: string;
 }
 
-interface ChoiceData {
-  ChoiceText: String;
+interface Result {
+  id: number;
+  option: string;
+  votes: number;
+  realId : number;
 }
 
 const voiceCallRooms = {};
@@ -557,13 +560,6 @@ io.on('connection' , (socket)=> {
 
   socket.on('createSurvey' , async( question: string , choice: string[]) => {
 
-    interface Result {
-      id: number;
-      option: string;
-      votes: number;
-      realId : number;
-    }
-
     if(!choice){
       socket.emit('resultCreateSurvey' , 'Choice data is invalid.');
       return ;
@@ -616,31 +612,33 @@ io.on('connection' , (socket)=> {
 
     const choiceData: Result[] = [];
 
-  for (let i = 0; i < choiceSurvey.length; i++) {
-    const ch = choiceSurvey[i];
-    const result: Result = {
-      // id: ch.id,
-      id: i,
-      option: ch.text,
-      votes: ch.votes || 0,
-      realId : ch.id,
+    for (let i = 0; i < choiceSurvey.length; i++) {
+      const ch = choiceSurvey[i];
+      const result: Result = {
+        // id: ch.id,
+        id: i,
+        option: ch.text,
+        votes: ch.votes || 0,
+        realId : ch.id,
 
-    };
-    choiceData.push(result);
-  }
+      };
+      choiceData.push(result);
+    }
 
     socket.data.survey = createdSurvey;
+    socket.data.survey.id = createdSurvey?.id;
     socket.data.survey.question = createdSurvey?.question;
     io.to(socket.data.user.roomId).emit('resultCreateSurvey', {
       question: socket.data.survey.question,
       choiceSurvey: choiceData
-  });
+    });
     console.log(socket.data.survey);
+
   });
 
   socket.on('submitResponse', async (choiceId: number) => {
 
-    await prisma.choice.update({
+    const result = await prisma.choice.update({
       where: { id: choiceId },
       data: {
         votes: {
@@ -649,7 +647,28 @@ io.on('connection' , (socket)=> {
       },
     });
 
-    io.to(socket.data.user.roomId).emit('resultSummitRes' , choiceId);
+    const choice = await prisma.choice.findMany({
+      where:{
+        surveyId:socket.data.survey.id,
+      }
+    });
+
+    const choiceData: Result[] = [];
+
+    for (let i = 0; i < choice.length; i++) {
+      const ch = choice[i];
+      const result: Result = {
+        // id: ch.id,
+        id: i,
+        option: ch.text,
+        votes: ch.votes || 0,
+        realId : ch.id,
+
+      };
+      choiceData.push(result);
+    }
+
+    io.to(socket.data.user.roomId).emit('resultSummitRes' , choiceData);
 
   });
   
