@@ -647,16 +647,30 @@ io.on('connection' , (socket)=> {
       },
     });
 
-    const choice = await prisma.choice.findMany({
+    const choice = await prisma.choice.findUnique({
+      where: { id: choiceId },
+      select: { surveyId: true }
+    })
+    
+    if (!choice) {
+      throw new Error(`Choice with ID ${choiceId} not found`)
+    }
+    
+    const surveyId = choice.surveyId
+    console.log(`The survey ID for choice ${choiceId} is ${surveyId}`)
+
+    socket.data.survey.id = surveyId;
+    
+    const findChoice = await prisma.choice.findMany({
       where:{
-        surveyId:socket.data.survey.id,
+        surveyId:surveyId,
       }
     });
 
     const choiceData: Result[] = [];
 
-    for (let i = 0; i < choice.length; i++) {
-      const ch = choice[i];
+    for (let i = 0; i < findChoice.length; i++) {
+      const ch = findChoice[i];
       const result: Result = {
         // id: ch.id,
         id: i,
