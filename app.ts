@@ -559,10 +559,9 @@ io.on('connection' , (socket)=> {
 
     interface Result {
       id: number;
-      text: string;
+      option: string;
       votes: number;
-      percentage?: number;
-      realId : number
+      realId : number;
     }
 
     if(!choice){
@@ -622,10 +621,10 @@ io.on('connection' , (socket)=> {
     const result: Result = {
       // id: ch.id,
       id: i,
-      text: ch.text,
+      option: ch.text,
       votes: ch.votes || 0,
-      percentage: ch.percentage || 0,
       realId : ch.id,
+
     };
     choiceData.push(result);
   }
