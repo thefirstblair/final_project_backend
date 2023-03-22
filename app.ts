@@ -658,8 +658,6 @@ io.on('connection' , (socket)=> {
     
     const surveyId = choice.surveyId
     console.log(`The survey ID for choice ${choiceId} is ${surveyId}`)
-
-    socket.data.survey.id = surveyId;
     
     const findChoice = await prisma.choice.findMany({
       where:{
