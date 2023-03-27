@@ -68,6 +68,8 @@ calendarRouter.post('/create-event', async (req, res, next) => {
                     dateTime: new Date(endDateTime)
                 },
                 attendees: attendeesMail
+                , guestsCanSeeOtherGuests: false
+                
             }
         })
         res.send(response)
